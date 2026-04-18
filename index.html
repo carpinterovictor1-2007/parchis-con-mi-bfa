@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Parchís Premium</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="ambient-background">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+
+    <div class="app-container">
+        <!-- SCREEN 1: LOGIN -->
+        <div id="screen-login" class="screen flex-center">
+            <div class="glass-panel ui-panel">
+                <h2>Bienvenido a Parchís</h2>
+                <p>Ingresa tu nombre para jugar con amigos.</p>
+                <div class="input-group">
+                    <input type="text" id="input-playerName" placeholder="Tu Nombre o Apodo" autocomplete="off" maxlength="15">
+                </div>
+                <button id="btn-login" class="btn-primary" disabled>Entrar al juego</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 2: LOBBY -->
+        <div id="screen-lobby" class="screen hidden flex-center">
+            <div class="glass-panel ui-panel lobby-panel">
+                <div class="lobby-header">
+                    <h2>Salas de Parchís</h2>
+                    <span id="welcome-text">Hola, Jugador</span>
+                </div>
+                
+                <div class="lobby-grid">
+                    <div class="lobby-card create-room">
+                        <h3>Crear Sala Nueva</h3>
+                        <p>Sé el anfitrión e invita a tus amigos.</p>
+                        <div class="input-group">
+                            <input type="password" id="input-createPassword" placeholder="Contraseña (Opcional)">
+                        </div>
+                        <button id="btn-create-room" class="btn-secondary mt-4">Generar Sala Segura</button>
+                    </div>
+                    
+                    <div class="lobby-card join-room">
+                        <h3>Unirse a una Sala</h3>
+                        <p>Ingresa el código que te pasaron.</p>
+                        <div class="input-group">
+                            <input type="text" id="input-joinRoomId" placeholder="ID de la Sala" autocomplete="off">
+                            <input type="password" id="input-joinPassword" placeholder="Contraseña">
+                        </div>
+                        <button id="btn-join-room" class="btn-primary mt-4">Unirme y Jugar</button>
+                    </div>
+                </div>
+                
+                <button id="btn-logout" class="link-btn mt-4">Cambiar Nombre</button>
+            </div>
+        </div>
+
+        <!-- SCREEN 2.5: WAITING ROOM -->
+        <div id="screen-waiting-room" class="screen hidden flex-center">
+            <div class="glass-panel ui-panel">
+                <h2 id="waiting-room-title">Sala de Espera</h2>
+                <p>Esperando a que se unan los jugadores (Mínimo 2)</p>
+                
+                <div id="player-slots" class="player-slots">
+                    <div class="slot red-slot" id="slot-red">
+                        <div class="color-indicator bg-red"></div>
+                        <span class="slot-name">Esperando...</span>
+                    </div>
+                    <div class="slot green-slot" id="slot-green">
+                        <div class="color-indicator bg-green"></div>
+                        <span class="slot-name">Esperando...</span>
+                    </div>
+                    <div class="slot yellow-slot" id="slot-yellow">
+                        <div class="color-indicator bg-yellow"></div>
+                        <span class="slot-name">Esperando...</span>
+                    </div>
+                    <div class="slot blue-slot" id="slot-blue">
+                        <div class="color-indicator bg-blue"></div>
+                        <span class="slot-name">Esperando...</span>
+                    </div>
+                </div>
+
+                <div class="waiting-actions">
+                    <button id="btn-add-local" class="btn-secondary">Simular Amigo (Local)</button>
+                    <button id="btn-start-match" class="btn-primary" disabled>Iniciar Partida</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- SCREEN 3: GAME -->
+        <div id="screen-game" class="screen hidden">
+            <header class="header glass-panel">
+                <h1>Parchís <span id="current-room-badge" class="badge">Sala: LOCAL</span></h1>
+                <div id="turn-indicator" class="turn-indicator">
+                <span class="active-color-dot" id="active-color-dot"></span>
+                <span id="status-message">Turno del Rojo</span>
+            </div>
+        </header>
+
+        <main class="game-area">
+            <!-- Left Players -->
+            <div class="players-column">
+                <div class="player-card glass-panel" id="card-green">
+                    <div class="card-header">
+                        <div class="color-swatch bg-green"></div>
+                        <h3>Verde</h3>
+                    </div>
+                    <div class="card-stats">Meta: <span id="meta-green">0</span>/4</div>
+                </div>
+                <div class="player-card glass-panel" id="card-blue">
+                    <div class="card-header">
+                        <div class="color-swatch bg-blue"></div>
+                        <h3>Azul</h3>
+                    </div>
+                    <div class="card-stats">Meta: <span id="meta-blue">0</span>/4</div>
+                </div>
+            </div>
+
+            <!-- Board -->
+            <div class="board-wrapper">
+                <div id="board" class="board">
+                    <!-- Cells dynamically generated -->
+                </div>
+                <!-- Interactive layer for pawns to be absolutely positioned over the board -->
+                <div id="pawntopia" class="pawn-layer">
+                    <!-- Pawns dynamically generated -->
+                </div>
+                
+                <div id="dice-container" class="dice-container glass-panel">
+                    <div class="dice-scene">
+                        <div id="dice" class="dice">
+                            <div class="dice-face face-1"><span class="dot"></span></div>
+                            <div class="dice-face face-2"><span class="dot"></span><span class="dot"></span></div>
+                            <div class="dice-face face-3"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            <div class="dice-face face-4">
+                                <div class="column"><span class="dot"></span><span class="dot"></span></div>
+                                <div class="column"><span class="dot"></span><span class="dot"></span></div>
+                            </div>
+                            <div class="dice-face face-5">
+                                <div class="column"><span class="dot"></span><span class="dot"></span></div>
+                                <div class="column"><span class="dot"></span></div>
+                                <div class="column"><span class="dot"></span><span class="dot"></span></div>
+                            </div>
+                            <div class="dice-face face-6">
+                                <div class="column"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                                <div class="column"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="btn-roll" class="btn-primary">Tirar Dado</button>
+                </div>
+            </div>
+
+            <!-- Right Players -->
+            <div class="players-column">
+                <div class="player-card glass-panel" id="card-yellow">
+                    <div class="card-header">
+                        <div class="color-swatch bg-yellow"></div>
+                        <h3>Amarillo</h3>
+                    </div>
+                    <div class="card-stats">Meta: <span id="meta-yellow">0</span>/4</div>
+                </div>
+                <div class="player-card glass-panel" id="card-red">
+                    <div class="card-header">
+                        <div class="color-swatch bg-red"></div>
+                        <h3>Rojo</h3>
+                    </div>
+                    <div class="card-stats">Meta: <span id="meta-red">0</span>/4</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-content glass-panel">
+            <h2 id="modal-title">¡Victoria!</h2>
+            <p id="modal-message">El jugador Rojo ha ganado.</p>
+            <button id="btn-restart" class="btn-primary mt-4">Jugar de Nuevo</button>
+        </div>
+    </div>
+    
+    <script src="game.js"></script>
+</body>
+</html>
