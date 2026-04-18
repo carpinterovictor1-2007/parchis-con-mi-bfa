@@ -69,6 +69,14 @@
                 <h2 id="waiting-room-title">Sala de Espera</h2>
                 <p>Esperando a que se unan los jugadores (Mínimo 2)</p>
                 
+                <div class="invite-section" id="invite-section" style="margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px;">
+                    <p style="margin-bottom: 10px; font-size: 0.9rem;">Comparte este enlace con tus amigos:</p>
+                    <div style="display: flex; gap: 10px;">
+                        <input type="text" id="input-invite-link" readonly style="flex: 1; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: white; outline: none;">
+                        <button id="btn-copy-link" class="btn-primary" style="width: auto; padding: 10px 15px;">Copiar</button>
+                    </div>
+                </div>
+
                 <div id="player-slots" class="player-slots">
                     <div class="slot red-slot" id="slot-red">
                         <div class="color-indicator bg-red"></div>
@@ -182,11 +190,11 @@
     <div id="modal-overlay" class="modal-overlay hidden">
         <div class="modal-content glass-panel">
             <h2 id="modal-title">¡Victoria!</h2>
-            <p id="modal-message">El jugador Rojo ha ganado.</p>
+            <p id="modal-message">Cargando...</p>
             <button id="btn-restart" class="btn-primary mt-4">Jugar de Nuevo</button>
         </div>
     </div>
     
-    <script src="game.js"></script>
+    <script type="module" src="game.js"></script>
 </body>
 </html>
