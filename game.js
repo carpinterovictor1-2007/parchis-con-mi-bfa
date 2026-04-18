@@ -1,5 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-import { getDatabase, ref, set, onValue, get, update } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { getDatabase, ref, set, onValue, get, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD-4hZ84MzNLlsfBmXX53QXeqj74QDZsFw",
@@ -12,9 +13,14 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
+const auth = getAuth(app);
+const provider = new GoogleAuthProvider();
 
 // 0. LOBBY AND LOGIN STATE
-let currentPlayerName = localStorage.getItem('parchis_name') || "";
+// Fetch entire user payload instead of just name
+let currentUser = JSON.parse(localStorage.getItem('parchis_auth_user')) || null;
+let currentPlayerName = currentUser ? currentUser.displayName : "";
+let currentUserId = currentUser ? currentUser.customId : null;
 let currentRoomId = null;
 let myColor = null;
 let gameRef = null;
@@ -29,8 +35,8 @@ const screenLobby = document.getElementById('screen-lobby');
 const screenWaiting = document.getElementById('screen-waiting-room');
 const screenGame = document.getElementById('screen-game');
 
-const inputName = document.getElementById('input-playerName');
 const btnLogin = document.getElementById('btn-login');
+const loginSpinner = document.getElementById('login-spinner');
 
 // URL Parsing for invites
 const urlParams = new URLSearchParams(window.location.search);
@@ -47,31 +53,80 @@ function checkInitialRouting() {
     }
 }
 
-if (currentPlayerName) {
+if (currentUser && currentPlayerName) {
     checkInitialRouting();
 } else {
     screenLogin.classList.remove('hidden');
 }
 
-inputName.addEventListener('input', (e) => {
-    btnLogin.disabled = e.target.value.trim().length === 0;
-});
+btnLogin.addEventListener('click', async () => {
+    btnLogin.style.display = 'none';
+    loginSpinner.style.display = 'block';
 
-btnLogin.addEventListener('click', () => {
-    let name = inputName.value.trim();
-    if (name) {
-        currentPlayerName = name;
-        localStorage.setItem('parchis_name', name);
-        screenLogin.classList.add('hidden');
-        checkInitialRouting();
+    try {
+        const result = await signInWithPopup(auth, provider);
+        const user = result.user;
+        
+        let userRef = ref(db, 'users/' + user.uid);
+        get(userRef).then(snapshot => {
+            if (snapshot.exists()) {
+                let data = snapshot.val();
+                saveLocalAndProceed(data);
+            } else {
+                let counterRef = ref(db, 'global/userCounter');
+                runTransaction(counterRef, (currentValue) => {
+                    if (currentValue === null) return 1001; 
+                    return currentValue + 1;
+                }).then(({ committed, snapshot: counterSnapshot }) => {
+                    if (committed) {
+                        let newId = counterSnapshot.val();
+                        let shortName = user.displayName.split(' ')[0]; // Primer nombre
+                        let fullDisplay = `${shortName} #${newId}`;
+                        
+                        let newUserObj = {
+                            uid: user.uid,
+                            rawName: user.displayName,
+                            customId: newId,
+                            displayName: fullDisplay
+                        };
+                        
+                        set(userRef, newUserObj);
+                        saveLocalAndProceed(newUserObj);
+                    }
+                }).catch(err => {
+                    alert("Error generando ID: " + err.message);
+                    resetLoginUI();
+                });
+            }
+        });
+    } catch (error) {
+        console.error("Auth Error", error);
+        resetLoginUI();
     }
 });
 
+function saveLocalAndProceed(userDataObj) {
+    currentUser = userDataObj;
+    currentPlayerName = userDataObj.displayName;
+    currentUserId = userDataObj.customId;
+    localStorage.setItem('parchis_auth_user', JSON.stringify(userDataObj));
+    
+    screenLogin.classList.add('hidden');
+    checkInitialRouting();
+}
+
+function resetLoginUI() {
+    btnLogin.style.display = 'flex';
+    loginSpinner.style.display = 'none';
+}
+
 document.getElementById('btn-logout').addEventListener('click', () => {
-    localStorage.removeItem('parchis_name');
+    auth.signOut();
+    localStorage.removeItem('parchis_auth_user');
+    currentUser = null;
     currentPlayerName = "";
-    inputName.value = "";
-    btnLogin.disabled = true;
+    currentUserId = null;
+    resetLoginUI();
     screenLobby.classList.add('hidden');
     screenLogin.classList.remove('hidden');
 });

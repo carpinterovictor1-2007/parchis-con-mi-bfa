@@ -22,11 +22,14 @@
         <div id="screen-login" class="screen flex-center">
             <div class="glass-panel ui-panel">
                 <h2>Bienvenido a Parchís</h2>
-                <p>Ingresa tu nombre para jugar con amigos.</p>
-                <div class="input-group">
-                    <input type="text" id="input-playerName" placeholder="Tu Nombre o Apodo" autocomplete="off" maxlength="15">
+                <p>Identifícate con tu cuenta oficial para ingresar.</p>
+                <div class="input-group" style="align-items: center; justify-content: center; margin-top: 20px;">
+                    <button id="btn-login" class="btn-primary" style="display: flex; gap: 10px; align-items: center; justify-content: center; background: white; color: #333; font-weight: bold; width: 100%;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" style="width: 20px; height: 20px;">
+                        <span>Entrar con Google</span>
+                    </button>
+                    <div id="login-spinner" style="display: none; margin-top: 15px; color: #bbb;">Conectando a Google...</div>
                 </div>
-                <button id="btn-login" class="btn-primary" disabled>Entrar al juego</button>
             </div>
         </div>
 
