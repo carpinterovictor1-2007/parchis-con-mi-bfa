@@ -241,6 +241,7 @@ document.getElementById('btn-start-match').addEventListener('click', () => {
 
 // --- FIREBASE SYNC ENGINE ---
 let localDiceTrigger = 0;
+let chatMessagesRendered = 0; // to avoid re-rendering entire history
 
 function listenToRoom() {
     onValue(gameRef, (snapshot) => {
@@ -270,16 +271,67 @@ function listenToRoom() {
             lastMovedPawnId = data.lastMovedPawnId || null;
             PLAYERS = data.activePlayers || [];
             
-            // Check if remote dice roll was triggered
             if (data.diceTrigger && data.diceTrigger !== localDiceTrigger) {
                 localDiceTrigger = data.diceTrigger;
                 playDiceAnimation(diceValue);
+            }
+            
+            // Render Chat
+            if (data.chat) {
+                renderChat(data.chat);
             }
             
             updateUI();
             renderPawns();
         }
     });
+}
+
+function renderChat(chatObj) {
+    let chatBox = document.getElementById('chat-messages');
+    let msgs = Object.values(chatObj).sort((a,b) => a.timestamp - b.timestamp);
+    
+    if (msgs.length > chatMessagesRendered) {
+        chatBox.innerHTML = '';
+        msgs.forEach(msg => {
+            let div = document.createElement('div');
+            let isMine = msg.name === currentPlayerName;
+            div.className = `chat-msg ${isMine ? 'mine' : ''}`;
+            
+            let author = document.createElement('div');
+            author.className = 'author';
+            author.innerText = msg.name;
+            
+            let text = document.createElement('div');
+            text.innerText = msg.text;
+            
+            div.appendChild(author);
+            div.appendChild(text);
+            chatBox.appendChild(div);
+        });
+        chatMessagesRendered = msgs.length;
+        chatBox.scrollTop = chatBox.scrollHeight;
+    }
+}
+
+document.getElementById('btn-send-chat').addEventListener('click', sendChatMessage);
+document.getElementById('chat-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') sendChatMessage();
+});
+
+function sendChatMessage() {
+    let input = document.getElementById('chat-input');
+    let text = input.value.trim();
+    if (!text) return;
+    
+    let msgId = Date.now().toString();
+    update(ref(db, `rooms/${currentRoomId}/chat/${msgId}`), {
+        name: currentPlayerName,
+        text: text,
+        timestamp: Date.now()
+    });
+    
+    input.value = '';
 }
 
 // 1. BOARD MAPPING
@@ -510,6 +562,8 @@ function renderPawns() {
 
 document.getElementById('btn-roll').addEventListener('click', () => {
     if (diceRolled) return;
+    
+    // Check if it's strictly our turn and NO pawns are animating
     if (PLAYERS[turnIndex] !== myColor) {
         alert("¡Aún no es tu turno!");
         return;
@@ -518,7 +572,6 @@ document.getElementById('btn-roll').addEventListener('click', () => {
     let generatedDice = Math.floor(Math.random() * 6) + 1;
     let newTrigger = Date.now();
     
-    // Broadcast roll to firebase
     update(gameRef, {
         diceValue: generatedDice,
         diceTrigger: newTrigger
@@ -527,7 +580,9 @@ document.getElementById('btn-roll').addEventListener('click', () => {
 
 function playDiceAnimation(val) {
     const dice = document.getElementById('dice');
-    document.getElementById('dice-container').classList.add('visible');
+    const overlay = document.getElementById('dice-overlay');
+    
+    overlay.classList.add('visible');
     dice.classList.add('rolling');
     
     setTimeout(() => {
@@ -541,10 +596,10 @@ function playDiceAnimation(val) {
         if(val===5) { rotX=-90; rotY=0; }
         if(val===6) { rotX=90; rotY=0; }
         
-        dice.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg) translateZ(-30px)`;
-        
-        // Host locally processes logic directly if it's their turn? NO, firebase sync triggers for everyone.
-        // The player who rolled computes the outcome and pushes.
+        setTimeout(() => {
+            overlay.classList.remove('visible');
+        }, 1000);
+
         if (PLAYERS[turnIndex] === myColor) {
             
             if (val === 6) {
@@ -735,6 +790,8 @@ function updateUI() {
     let cp = PLAYERS[turnIndex];
     if (cp) {
         let statusStr = cp === myColor ? `¡Tu Turno!` : `Turno del ${cp.toUpperCase()}`;
+        if (diceRolled) statusStr = `¡Salió un ${diceValue}!`;
+        
         document.getElementById('status-message').innerText = statusStr;
         let dot = document.getElementById('active-color-dot');
         if(dot) dot.className = `active-color-dot bg-${cp}`;
