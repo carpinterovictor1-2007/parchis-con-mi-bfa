@@ -323,34 +323,36 @@ body {
 /* Pawn Layer */
 .pawn-layer {
     position: absolute;
-    top: 15px; left: 15px; right: 15px; bottom: 15px;
+    top: 18px; left: 18px; right: 18px; bottom: 18px;
     pointer-events: none;
     display: grid;
     grid-template-columns: repeat(var(--board-size), 1fr);
     grid-template-rows: repeat(var(--board-size), 1fr);
+    z-index: 50;
 }
 
 .pawn {
-    width: 75%;
-    height: 75%;
+    width: 80%;
+    height: 80%;
     border-radius: 50%;
     margin: auto;
     position: relative;
     cursor: pointer;
     pointer-events: auto;
     box-shadow: 
-        inset -4px -4px 8px rgba(0,0,0,0.4), 
-        inset 4px 4px 8px rgba(255,255,255,0.7),
-        0 6px 10px rgba(0,0,0,0.5);
-    border: 1.5px solid rgba(255,255,255,0.2);
-    transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
-    z-index: 10;
+        inset -4px -4px 8px rgba(0,0,0,0.3), 
+        inset 4px 4px 8px rgba(255,255,255,0.5),
+        0 6px 12px rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.3);
+    transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 60;
+    display: block;
 }
 
-.pawn.red { background: radial-gradient(circle at 35% 35%, #ff7b7b, var(--clr-red) 70%, #990c14); }
-.pawn.green { background: radial-gradient(circle at 35% 35%, #88f0a3, var(--clr-green) 70%, #015116); }
-.pawn.blue { background: radial-gradient(circle at 35% 35%, #7ab3fc, var(--clr-blue) 70%, #033c81); }
-.pawn.yellow { background: radial-gradient(circle at 35% 35%, #ffea9a, var(--clr-yellow) 70%, #906e00); }
+.pawn.red { background: #f31e2d; background: radial-gradient(circle at 35% 35%, #ff7b7b, #f31e2d 70%, #990c14); }
+.pawn.green { background: #03a830; background: radial-gradient(circle at 35% 35%, #88f0a3, #03a830 70%, #015116); }
+.pawn.blue { background: #1c81fd; background: radial-gradient(circle at 35% 35%, #7ab3fc, #1c81fd 70%, #033c81); }
+.pawn.yellow { background: #f8c005; background: radial-gradient(circle at 35% 35%, #ffea9a, #f8c005 70%, #906e00); }
 
 .pawn:hover {
     transform: scale(1.15) !important;
@@ -532,27 +534,84 @@ body {
 }
 
 /* Responsive adjustments */
-@media (max-width: 1000px) {
-    .app-container {
-        padding: 10px;
-    }
+@media (max-width: 1100px) {
     .game-area {
         flex-direction: column;
+        height: auto;
+        overflow-y: auto;
+        padding-bottom: 50px;
     }
     .players-column {
         flex-direction: row;
         width: 100%;
         justify-content: center;
+        gap: 10px;
+        order: 1;
     }
-    .player-card {
-        padding: 10px;
-        flex: 1;
-        max-width: 150px;
+    .right-column {
+        order: 3;
     }
     .board-wrapper {
-        width: min(95vw, 600px);
-        height: min(95vw, 600px);
+        order: 2;
+        width: min(90vw, 600px);
+        height: min(90vw, 600px);
     }
+    .player-card {
+        flex: 1;
+        max-width: 140px;
+        padding: 10px;
+    }
+    .header h1 {
+        font-size: 1.5rem;
+    }
+    .chat-container {
+        width: 100%;
+        max-width: 600px;
+        height: 250px;
+    }
+}
+
+@media (max-width: 600px) {
+    .app-container {
+        padding: 5px;
+    }
+    .header {
+        padding: 10px;
+        flex-direction: column;
+        gap: 5px;
+    }
+    .board-wrapper {
+        padding: 8px;
+    }
+    .pawn-layer {
+        top: 11px; left: 11px; right: 11px; bottom: 11px; /* 8px padding + 3px border */
+    }
+    .cell.center::after {
+        font-size: 24px;
+    }
+    .dice-overlay {
+        width: 130px;
+        height: 70px;
+        flex-direction: row;
+        gap: 10px;
+        padding: 10px;
+    }
+    .dice-scene {
+        width: 45px;
+        height: 45px;
+    }
+    .dice-face {
+        width: 45px;
+        height: 45px;
+    }
+    .face-1 { transform: rotateY(0deg) translateZ(22px); }
+    .face-2 { transform: rotateY(90deg) translateZ(22px); }
+    .face-3 { transform: rotateY(180deg) translateZ(22px); }
+    .face-4 { transform: rotateY(-90deg) translateZ(22px); }
+    .face-5 { transform: rotateX(90deg) translateZ(22px); }
+    .face-6 { transform: rotateX(-90deg) translateZ(22px); }
+    
+    .dot { width: 8px; height: 8px; }
 }
 
 /* --- LOBBY AND LOGIN STYLES --- */

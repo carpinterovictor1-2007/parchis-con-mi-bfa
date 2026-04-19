@@ -752,7 +752,7 @@ function renderPawns() {
         pawnEl.style.gridColumn = c;
 
         let occ = occupancy[`${r},${c}`];
-        if (occ.length > 1 && !pawn.isHome) {
+        if (occ && occ.length > 1 && !pawn.isHome) {
             let idx = occ.findIndex(o => o.id === pawn.id);
             let offsetX = idx % 2 === 0 ? -12 : 12;
             let offsetY = idx < 2 ? -12 : 12;
