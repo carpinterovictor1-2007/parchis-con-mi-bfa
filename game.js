@@ -457,9 +457,11 @@ document.getElementById('btn-start-match').addEventListener('click', () => {
 let localDiceTrigger = 0;
 let chatMessagesRendered = 0; 
 let turnRolledSix = false;
+let isAnimating = false;
 
 function listenToRoom() {
     onValue(gameRef, (snapshot) => {
+        if (isAnimating) return; // Guard for visual smoothness
         let data = snapshot.val();
         if (!data) return;
         
@@ -705,24 +707,20 @@ function createHome(color) {
 
 function renderPawns() {
     if (!pawntopiaEl) return;
-    pawntopiaEl.innerHTML = '';
     
     let occupancy = {}; 
-
     gameState.forEach(pawn => {
         if (!pawn.isMeta) {
             let r, c;
             if (pawn.isHome) {
                 let spot = homeSpots[pawn.color][pawn.pieceIdx];
-                r = spot[0]; c = spot[1];
+                if (spot) { r = spot[0]; c = spot[1]; }
             } else if (pawn.stairIndex !== null) {
                 let spot = stairsCoords[pawn.color][pawn.stairIndex];
-                r = spot[0]; c = spot[1];
+                if (spot) { r = spot[0]; c = spot[1]; }
             } else {
                 let spot = pathCoords[pawn.pathIndex];
-                if (spot) {
-                    r = spot[0]; c = spot[1];
-                }
+                if (spot) { r = spot[0]; c = spot[1]; }
             }
             
             if (r !== undefined && c !== undefined) {
@@ -733,12 +731,19 @@ function renderPawns() {
         }
     });
 
+    // Create/Update pawns (Diffing approach for smooth transition)
+    const existingPawnIds = new Set();
     gameState.forEach(pawn => {
         if (pawn.isMeta) return;
 
-        let pawnEl = document.createElement('div');
-        pawnEl.className = `pawn ${pawn.color}`;
-        pawnEl.id = `pawn-${pawn.id}`;
+        let pawnEl = document.getElementById(`pawn-${pawn.id}`);
+        if (!pawnEl) {
+            pawnEl = document.createElement('div');
+            pawnEl.className = `pawn ${pawn.color}`;
+            pawnEl.id = `pawn-${pawn.id}`;
+            pawntopiaEl.appendChild(pawnEl);
+        }
+        existingPawnIds.add(pawnEl.id);
         
         let r, c;
         if (pawn.isHome) {
@@ -754,22 +759,33 @@ function renderPawns() {
 
         if (r === undefined || c === undefined) return;
 
-        pawnEl.style.gridRow = r;
-        pawnEl.style.gridColumn = c;
-
+        // Calculate absolute percentages (19x19 grid)
+        // Center the 0.75 width pawn inside the (100/19) cell
+        let cellPercent = 100 / 19;
+        let leftBase = (c - 1) * cellPercent;
+        let topBase = (r - 1) * cellPercent;
+        
+        // Offset to center pawn within cell
+        let offset = (cellPercent * (1 - 0.75)) / 2;
+        
         let occ = occupancy[`${r},${c}`];
+        let scale = 1;
+
         if (occ && occ.length > 1 && !pawn.isHome) {
             let idx = occ.findIndex(o => o.id === pawn.id);
-            let offsetX = idx % 2 === 0 ? -12 : 12;
-            let offsetY = idx < 2 ? -12 : 12;
+            let offsetX = idx % 2 === 0 ? -1.2 : 1.2; // Percentual offset relative to cell
+            let offsetY = idx < 2 ? -1.2 : 1.2;
+            if (idx === 0) { offsetX = -1.0; offsetY = -1.0; }
+            else if (idx === 1) { offsetX = 1.0; offsetY = 1.0; }
             
-            if (idx === 0) {
-                offsetX = -10; offsetY = -10;
-            } else if (idx === 1) {
-                offsetX = 10; offsetY = 10;
-            }
-            pawnEl.style.transform = `translate(${offsetX}%, ${offsetY}%) scale(0.6)`;
+            leftBase += offsetX;
+            topBase += offsetY;
+            scale = 0.65;
         }
+
+        pawnEl.style.left = `${leftBase + offset}%`;
+        pawnEl.style.top = `${topBase + offset}%`;
+        pawnEl.style.transform = `scale(${scale})`;
 
         if (diceRolled && pawn.color === PLAYERS[turnIndex] && pawn.color === myColor) {
             let validMoves = getSelectablePawns(myColor, diceValues);
@@ -777,10 +793,21 @@ function renderPawns() {
             if (moveObj) {
                 pawnEl.classList.add('selectable');
                 pawnEl.onclick = () => handlePawnClick(pawn, moveObj.uses);
+            } else {
+                pawnEl.classList.remove('selectable');
+                pawnEl.onclick = null;
             }
+        } else {
+            pawnEl.classList.remove('selectable');
+            pawnEl.onclick = null;
         }
+    });
 
-        pawntopiaEl.appendChild(pawnEl);
+    // Remove pawns no longer in gameState (e.g. they became meta)
+    Array.from(pawntopiaEl.children).forEach(child => {
+        if (!existingPawnIds.has(child.id)) {
+            pawntopiaEl.removeChild(child);
+        }
     });
 }
 
@@ -865,97 +892,131 @@ document.getElementById('btn-roll').addEventListener('click', () => {
 });
 
 function playDiceAnimation(valArr) {
+    if (isAnimating) return;
+    isAnimating = true;
+
     const dice1 = document.getElementById('dice1');
     const dice2 = document.getElementById('dice2');
     const overlay = document.getElementById('dice-overlay');
-    
+    const btn = document.getElementById('btn-roll');
+    if (btn) btn.disabled = true;
+
     overlay.classList.add('visible');
-    dice1.classList.add('rolling');
-    dice2.classList.add('rolling');
     
-    setTimeout(() => {
-        dice1.classList.remove('rolling');
-        dice2.classList.remove('rolling');
-        let applyFace = (dEl, val) => {
-            let rotX=0, rotY=0;
-            if(val===1) { rotX=0; rotY=0; }
-            if(val===2) { rotX=0; rotY=-90; }
-            if(val===3) { rotX=0; rotY=-180; }
-            if(val===4) { rotX=0; rotY=90; }
-            if(val===5) { rotX=-90; rotY=0; }
-            if(val===6) { rotX=90; rotY=0; }
-            dEl.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
-        };
-        applyFace(dice1, valArr[0]);
-        applyFace(dice2, valArr[1]);
+    let startTime = null;
+    const duration = 1000;
 
-        setTimeout(() => {
-            overlay.classList.remove('visible');
-        }, 1000);
+    function animateDice(timestamp) {
+        if (!startTime) startTime = timestamp;
+        let progress = timestamp - startTime;
 
-        if (PLAYERS[turnIndex] === myColor) {
-            let actualValues = [...valArr];
-            
-            // Regla del 7 si todas salieron
-            let myPawnsInHome = gameState.filter(p => p.color === myColor && p.isHome);
-            if (myPawnsInHome.length === 0) {
-                if (actualValues[0] === 6) actualValues[0] = 7;
-                if (actualValues[1] === 6) actualValues[1] = 7;
-            }
-            
-            // Castigo 3er doble
-            if (actualValues[0] === actualValues[1]) {
-                consecutiveDoubles++;
-            } else {
-                consecutiveDoubles = 0;
-            }
-            
-            if (consecutiveDoubles === 3) {
-                document.getElementById('status-message').innerText = `¡Tres dobles seguidos! Ficha castigada a casa.`;
-                let lastPawn = gameState.find(p => p.id === lastMovedPawnId);
-                if (lastPawn && lastPawn.color === myColor && lastPawn.stairIndex === null && !lastPawn.isHome && !lastPawn.isMeta) {
-                    lastPawn.isHome = true;
-                    lastPawn.pathIndex = null;
-                }
-                setTimeout(() => {
-                    update(gameRef, {
-                        diceRolled: false,
-                        diceValues: [],
-                        turnIndex: (turnIndex + 1) % PLAYERS.length,
-                        consecutiveDoubles: 0,
-                        turnRolledDoubles: false,
-                        gameState: gameState 
-                    });
-                }, 2000);
-                return; 
-            }
-            
-            let possibleMoves = getSelectablePawns(myColor, actualValues);
-            
-            if (possibleMoves.length === 0) {
-                document.getElementById('status-message').innerText = `Sin movimientos válidos. Turno perdido.`;
-                setTimeout(() => {
-                    let nextIdx = (turnIndex + 1) % PLAYERS.length;
-                    if (actualValues[0] === actualValues[1]) nextIdx = turnIndex; 
-                    
-                    update(gameRef, {
-                        diceRolled: false,
-                        diceValues: [],
-                        turnIndex: nextIdx,
-                        consecutiveDoubles: consecutiveDoubles,
-                        turnRolledDoubles: false
-                    });
-                }, 2000);
-            } else {
-                update(gameRef, {
-                    diceValues: actualValues,
-                    diceRolled: true,
-                    consecutiveDoubles: consecutiveDoubles,
-                    turnRolledDoubles: (actualValues[0] === actualValues[1])
+        if (progress < duration) {
+            // Randomly rotate during roll
+            let rx1 = Math.random() * 360, ry1 = Math.random() * 360;
+            let rx2 = Math.random() * 360, ry2 = Math.random() * 360;
+            dice1.style.transform = `rotateX(${rx1}deg) rotateY(${ry1}deg)`;
+            dice2.style.transform = `rotateX(${rx2}deg) rotateY(${ry2}deg)`;
+            requestAnimationFrame(animateDice);
+        } else {
+            // Settle on values
+            let applyFace = (dEl, val) => {
+                let rotX=0, rotY=0;
+                if(val===1) { rotX=0; rotY=0; }
+                if(val===2) { rotX=0; rotY=-90; }
+                if(val===3) { rotX=0; rotY=-180; }
+                if(val===4) { rotX=0; rotY=90; }
+                if(val===5) { rotX=-90; rotY=0; }
+                if(val===6) { rotX=90; rotY=0; }
+                dEl.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+            };
+            applyFace(dice1, valArr[0]);
+            applyFace(dice2, valArr[1]);
+
+            setTimeout(() => {
+                overlay.classList.remove('visible');
+                isAnimating = false;
+                // Once animation is done, we could force a state refresh or updateUI
+                // to make sure we didn't miss any Firebase packets
+                get(gameRef).then(snap => {
+                    if (snap.exists()) {
+                        let data = snap.val();
+                        gameState = data.gameState || [];
+                        diceValues = data.diceValues || [];
+                        diceRolled = data.diceRolled;
+                        updateUI();
+                        renderPawns();
+                    }
                 });
-            }
+            }, 800);
+
+            // Logic part (keep existing game logic)
+            processDiceResult(valArr);
         }
-    }, 800);
+    }
+    requestAnimationFrame(animateDice);
+}
+
+function processDiceResult(valArr) {
+    if (PLAYERS[turnIndex] === myColor) {
+        let actualValues = [...valArr];
+        
+        let myPawnsInHome = gameState.filter(p => p.color === myColor && p.isHome);
+        if (myPawnsInHome.length === 0) {
+            if (actualValues[0] === 6) actualValues[0] = 7;
+            if (actualValues[1] === 6) actualValues[1] = 7;
+        }
+        
+        if (actualValues[0] === actualValues[1]) {
+            consecutiveDoubles++;
+        } else {
+            consecutiveDoubles = 0;
+        }
+        
+        if (consecutiveDoubles === 3) {
+            document.getElementById('status-message').innerText = `¡Tres dobles seguidos! Ficha castigada a casa.`;
+            let lastPawn = gameState.find(p => p.id === lastMovedPawnId);
+            if (lastPawn && lastPawn.color === myColor && lastPawn.stairIndex === null && !lastPawn.isHome && !lastPawn.isMeta) {
+                lastPawn.isHome = true;
+                lastPawn.pathIndex = null;
+            }
+            setTimeout(() => {
+                update(gameRef, {
+                    diceRolled: false,
+                    diceValues: [],
+                    turnIndex: (turnIndex + 1) % PLAYERS.length,
+                    consecutiveDoubles: 0,
+                    turnRolledDoubles: false,
+                    gameState: gameState 
+                });
+            }, 2000);
+            return; 
+        }
+        
+        let possibleMoves = getSelectablePawns(myColor, actualValues);
+        
+        if (possibleMoves.length === 0) {
+            document.getElementById('status-message').innerText = `Sin movimientos válidos. Turno perdido.`;
+            setTimeout(() => {
+                let nextIdx = (turnIndex + 1) % PLAYERS.length;
+                if (actualValues[0] === actualValues[1]) nextIdx = turnIndex; 
+                
+                update(gameRef, {
+                    diceRolled: false,
+                    diceValues: [],
+                    turnIndex: nextIdx,
+                    consecutiveDoubles: consecutiveDoubles,
+                    turnRolledDoubles: false
+                });
+            }, 2000);
+        } else {
+            update(gameRef, {
+                diceValues: actualValues,
+                diceRolled: true,
+                consecutiveDoubles: consecutiveDoubles,
+                turnRolledDoubles: (actualValues[0] === actualValues[1])
+            });
+        }
+    }
 }
 
 function isValidMove(pawn, steps) {
