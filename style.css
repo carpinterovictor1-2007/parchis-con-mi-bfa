@@ -239,14 +239,14 @@ body {
 .cell.center {
     grid-column: 9 / 12; 
     grid-row: 9 / 12;
-    background: linear-gradient(135deg, var(--clr-green) 50%, var(--clr-yellow) 50%);
-    position: relative;
-}
-.cell.center::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(225deg, transparent 50%, var(--clr-blue) 50%);
+    background: conic-gradient(
+        from -45deg,
+        var(--clr-green) 0deg 90deg,
+        var(--clr-yellow) 90deg 180deg,
+        var(--clr-blue) 180deg 270deg,
+        var(--clr-red) 270deg 360deg
+    );
+    border-radius: 4px;
 }
 .cell.center::after {
     content: '';
