@@ -1,12 +1,12 @@
 :root {
     /* Colors */
-    --clr-red: #ff3b30;
-    --clr-blue: #007aff;
-    --clr-green: #34c759;
-    --clr-yellow: #ffcc00;
-    --clr-safe: #8e8e93;
+    --clr-red: #f31e2d;
+    --clr-blue: #1c81fd;
+    --clr-green: #03a830;
+    --clr-yellow: #f8c005;
+    --clr-safe: #c4d8e2;
     --clr-board: #f4f4f7;
-    --clr-dark: #1c1c1e;
+    --clr-dark: #0f0f13;
     
     /* Glassmorphism */
     --glass-bg: rgba(255, 255, 255, 0.1);
@@ -149,28 +149,40 @@ body {
 }
 
 .player-card {
-    padding: 20px;
+    padding: 15px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
-    transition: transform 0.3s;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(255,255,255,0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+.player-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: -100%;
+    width: 100%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+    transition: 0.5s;
 }
 
 .player-card.active {
     transform: scale(1.05);
-    border-color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.4);
+    box-shadow: 0 0 20px rgba(255,255,255,0.1);
 }
 
-.card-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
+.player-card.active::before {
+    left: 100%;
 }
 
 .color-swatch {
     width: 24px;
     height: 24px;
-    border-radius: 6px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0,0,0,0.3), inset 2px 2px 4px rgba(255,255,255,0.5);
 }
 
 /* Board and Pawns */
@@ -178,10 +190,10 @@ body {
     position: relative;
     height: min(80vh, 800px);
     width: min(80vh, 800px);
-    background: #fff;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.5);
-    padding: 10px;
+    background: #4a2f1d;
+    border-radius: 18px;
+    box-shadow: 0 15px 45px rgba(0,0,0,0.7), inset 0 0 20px rgba(0,0,0,0.5);
+    padding: 15px;
     display: flex;
     align-items: auto;
     justify-content: center;
@@ -193,42 +205,60 @@ body {
     grid-template-rows: repeat(var(--board-size), 1fr);
     width: 100%;
     height: 100%;
-    gap: 1px;
-    background: #ccc; /* grid line colors */
-    border: 2px solid #333;
+    gap: 0px; 
+    background: #000;
+    border: 3px solid #333;
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .cell {
-    background: white;
+    background: #ffffff;
+    background-image: radial-gradient(rgba(0,0,0,0.03) 1px, transparent 1px);
+    background-size: 10px 10px;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
+    border: 0.5px solid rgba(0,0,0,0.1);
+    box-shadow: inset 0 0 5px rgba(0,0,0,0.02);
 }
 
 /* Cell Types */
 .cell.safe {
     background: var(--clr-safe);
-    clip-path: polygon(50% 10%, 90% 50%, 50% 90%, 10% 50%);
 }
 .cell.safe::after {
-    content: '';
+    content: '★';
     position: absolute;
-    width: 40%;
-    height: 40%;
-    background: #333;
-    border-radius: 50%;
+    font-size: clamp(12px, 2vw, 24px);
+    color: #ffb700;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
 }
 
-.cell.start-green { background: var(--clr-green); opacity: 0.6; }
-.cell.start-yellow { background: var(--clr-yellow); opacity: 0.6; }
-.cell.start-blue { background: var(--clr-blue); opacity: 0.6; }
-.cell.start-red { background: var(--clr-red); opacity: 0.6; }
+.cell.path-green { background: var(--clr-green); box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+.cell.path-yellow { background: var(--clr-yellow); box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+.cell.path-blue { background: var(--clr-blue); box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
+.cell.path-red { background: var(--clr-red); box-shadow: inset 0 0 10px rgba(0,0,0,0.1); }
 
-.cell.path-green { background: var(--clr-green); }
-.cell.path-yellow { background: var(--clr-yellow); }
-.cell.path-blue { background: var(--clr-blue); }
-.cell.path-red { background: var(--clr-red); }
+.cell.start-green, .cell.start-yellow, .cell.start-blue, .cell.start-red {
+    opacity: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.cell.start-green::before, .cell.start-yellow::before, .cell.start-blue::before, .cell.start-red::before {
+    content: '▲';
+    font-size: 20px;
+    color: rgba(255,255,255,0.8);
+    filter: drop-shadow(0 0 5px rgba(0,0,0,0.3));
+}
+
+.cell.start-green { background: radial-gradient(circle, #44e86a, var(--clr-green)); }
+.cell.start-yellow { background: radial-gradient(circle, #fff04d, var(--clr-yellow)); }
+.cell.start-blue { background: radial-gradient(circle, #5cb0ff, var(--clr-blue)); }
+.cell.start-red { background: radial-gradient(circle, #ff6b6b, var(--clr-red)); }
 
 /* The home bases */
 .cell.home-green { grid-column: 1 / 8; grid-row: 1 / 8; background: var(--clr-green); }
@@ -247,73 +277,96 @@ body {
         var(--clr-red) 270deg 360deg
     );
     border-radius: 4px;
+    box-shadow: inset 0 0 30px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 .cell.center::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(45deg, var(--clr-red) 50%, transparent 50%);
+    content: '🏆';
+    font-size: 40px;
+    filter: drop-shadow(0 0 10px rgba(255,215,0,0.8));
+    animation: goldShine 2s infinite alternate;
+}
+
+@keyframes goldShine {
+    from { transform: scale(0.9); opacity: 0.8; }
+    to { transform: scale(1.1); opacity: 1; }
 }
 
 
 /* Home Inner Circles */
 .home-inner {
-    width: 70%;
-    height: 70%;
-    background: white;
-    border-radius: 20px;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 65%;
+    height: 65%;
+    background: #fdfdfd;
+    border-radius: 50%;
+    box-shadow: inset 0 8px 15px rgba(0,0,0,0.2), 0 8px 20px rgba(0,0,0,0.3);
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-template-rows: 1fr 1fr;
-    gap: 15px;
-    padding: 15px;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.2);
+    place-items: center;
+    padding: 10%;
 }
 
 .home-spot {
-    background: #e0e0e0;
-    border: 2px solid #ccc;
+    width: 70%;
+    height: 70%;
     border-radius: 50%;
-    width: 100%;
-    height: 100%;
+    background: rgba(0,0,0,0.06);
+    box-shadow: inset 0 3px 6px rgba(0,0,0,0.2);
 }
 
 /* Pawn Layer */
 .pawn-layer {
     position: absolute;
-    top: 10px; left: 10px; right: 10px; bottom: 10px;
-    pointer-events: none; /* Let clicks pass to pawns only */
-    /* the pawns layer mimics the grid */
+    top: 15px; left: 15px; right: 15px; bottom: 15px;
+    pointer-events: none;
     display: grid;
     grid-template-columns: repeat(var(--board-size), 1fr);
     grid-template-rows: repeat(var(--board-size), 1fr);
 }
 
 .pawn {
-    width: 60%;
-    height: 60%;
+    width: 75%;
+    height: 75%;
     border-radius: 50%;
     margin: auto;
+    position: relative;
     cursor: pointer;
     pointer-events: auto;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0px 4px 6px rgba(255,255,255,0.6);
+    box-shadow: 
+        inset -4px -4px 8px rgba(0,0,0,0.4), 
+        inset 4px 4px 8px rgba(255,255,255,0.7),
+        0 6px 10px rgba(0,0,0,0.5);
+    border: 1.5px solid rgba(255,255,255,0.2);
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     z-index: 10;
-    border: 2px solid rgba(255,255,255,0.8);
 }
 
+.pawn.red { background: radial-gradient(circle at 35% 35%, #ff7b7b, var(--clr-red) 70%, #990c14); }
+.pawn.green { background: radial-gradient(circle at 35% 35%, #88f0a3, var(--clr-green) 70%, #015116); }
+.pawn.blue { background: radial-gradient(circle at 35% 35%, #7ab3fc, var(--clr-blue) 70%, #033c81); }
+.pawn.yellow { background: radial-gradient(circle at 35% 35%, #ffea9a, var(--clr-yellow) 70%, #906e00); }
+
 .pawn:hover {
-    transform: scale(1.2);
+    transform: scale(1.15) !important;
     z-index: 20;
+    box-shadow: 0 10px 15px rgba(0,0,0,0.6), inset -4px -4px 8px rgba(0,0,0,0.4), inset 4px 4px 8px rgba(255,255,255,0.7);
 }
 
 .pawn.selectable {
-    animation: pulse 1s infinite alternate;
+    animation: pawnReady 1.2s infinite;
+    z-index: 25;
 }
 
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0px rgba(255,255,255,0.7); }
-    100% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+@keyframes pawnReady {
+    0% { filter: drop-shadow(0 0 3px white) brightness(1); }
+    50% { filter: drop-shadow(0 0 15px white) brightness(1.4); }
+    100% { filter: drop-shadow(0 0 3px white) brightness(1); }
 }
 
 .bg-green { background: var(--clr-green); }
@@ -371,21 +424,25 @@ body {
     position: absolute;
     width: 60px;
     height: 60px;
-    background: white;
-    border: 2px solid #ddd;
-    border-radius: 10px;
+    background: radial-gradient(circle at 30% 30%, #fff, #eee 40%, #ccc);
+    border: 1px solid #aaa;
+    border-radius: 12px;
     display: flex;
     justify-content: center;
     align-items: center;
     padding: 8px;
-    box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+    box-shadow: 
+        inset -2px -2px 5px rgba(0,0,0,0.2), 
+        inset 2px 2px 5px rgba(255,255,255,1),
+        0 4px 10px rgba(0,0,0,0.3);
 }
 
 .dot {
     width: 12px;
     height: 12px;
-    background: #333;
+    background: #222;
     border-radius: 50%;
+    box-shadow: inset 1px 1px 2px rgba(0,0,0,0.8), 0 1px 1px rgba(255,255,255,0.4);
 }
 
 .column {
@@ -699,10 +756,24 @@ body {
 
 /* --- ROLL BUTTON AND CHAT --- */
 .roll-action-btn {
-    padding: 15px;
-    font-size: 1.2rem;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-    margin-top: 10px;
+    padding: 20px;
+    font-size: 1.4rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    border-radius: 15px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+    margin-top: 15px;
+    background: linear-gradient(135deg, #fbcf00, #ff8c00);
+    border: 1px solid rgba(255,255,255,0.3);
+    color: #111;
+    font-weight: 800;
+    animation: breathing 2s infinite ease-in-out;
+}
+
+@keyframes breathing {
+    0% { transform: scale(1); opacity: 0.95; }
+    50% { transform: scale(1.03); opacity: 1; box-shadow: 0 12px 30px rgba(255,140,0,0.4); }
+    100% { transform: scale(1); opacity: 0.95; }
 }
 
 .right-column {

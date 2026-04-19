@@ -672,7 +672,7 @@ function renderPawns() {
         if (pawn.isMeta) return;
 
         let pawnEl = document.createElement('div');
-        pawnEl.className = `pawn bg-${pawn.color}`;
+        pawnEl.className = `pawn ${pawn.color}`;
         pawnEl.id = `pawn-${pawn.id}`;
         
         let r, c;
