@@ -18,19 +18,57 @@
     </div>
 
     <div class="app-container">
-        <!-- SCREEN 1: LOGIN -->
+        <!-- SCREEN 1: LOGIN & REGISTER -->
         <div id="screen-login" class="screen flex-center">
-            <div class="glass-panel ui-panel">
+            
+            <!-- Login Box -->
+            <div class="glass-panel ui-panel" id="login-container">
                 <h2>Bienvenido a Parchís</h2>
-                <p>Identifícate con tu cuenta oficial para ingresar.</p>
-                <div class="input-group" style="align-items: center; justify-content: center; margin-top: 20px;">
-                    <button id="btn-login" class="btn-primary" style="display: flex; gap: 10px; align-items: center; justify-content: center; background: white; color: #333; font-weight: bold; width: 100%;">
+                <p>Inicia sesión para jugar.</p>
+                
+                <div class="input-group">
+                    <input type="email" id="input-login-email" placeholder="Correo Electrónico">
+                    <input type="password" id="input-login-password" placeholder="Contraseña">
+                    <button id="btn-email-login" class="btn-primary mt-4">Iniciar Sesión</button>
+                </div>
+                
+                <p style="margin: 15px 0; font-size: 0.9rem; opacity: 0.6;">o</p>
+
+                <div class="input-group">
+                    <button id="btn-google-login" class="btn-primary" style="display: flex; gap: 10px; align-items: center; justify-content: center; background: white; color: #333; font-weight: bold; width: 100%;">
                         <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" style="width: 20px; height: 20px;">
                         <span>Entrar con Google</span>
                     </button>
-                    <div id="login-spinner" style="display: none; margin-top: 15px; color: #bbb;">Conectando a Google...</div>
                 </div>
+                
+                <button id="btn-go-register" class="link-btn mt-4">¿No tienes cuenta? Registrate</button>
             </div>
+
+            <!-- Register Box -->
+            <div class="glass-panel ui-panel hidden" id="register-container" style="display: none;">
+                <h2>Crear Cuenta</h2>
+                <p>Únete a Parchís Premium</p>
+                
+                <div class="input-group">
+                    <input type="text" id="input-register-name" placeholder="Escribe tu Nombre">
+                    <input type="email" id="input-register-email" placeholder="Correo Electrónico">
+                    <input type="password" id="input-register-password" placeholder="Crear Contraseña">
+                    <button id="btn-email-register" class="btn-primary mt-4">Crear Cuenta</button>
+                </div>
+                
+                <p style="margin: 15px 0; font-size: 0.9rem; opacity: 0.6;">o</p>
+
+                <div class="input-group">
+                    <button id="btn-google-register" class="btn-primary" style="display: flex; gap: 10px; align-items: center; justify-content: center; background: white; color: #333; font-weight: bold; width: 100%;">
+                        <img src="https://upload.wikimedia.org/wikipedia/commons/c/c1/Google_%22G%22_logo.svg" alt="G" style="width: 20px; height: 20px;">
+                        <span>Registrarse con Google</span>
+                    </button>
+                </div>
+                
+                <button id="btn-go-login" class="link-btn mt-4">¿Ya tienes cuenta? Iniciar Sesión</button>
+            </div>
+            
+            <div id="auth-spinner" style="display: none; margin-top: 15px; background: rgba(0,0,0,0.5); padding: 10px 20px; border-radius: 10px;">Autenticando...</div>
         </div>
 
         <!-- SCREEN 2: LOBBY -->

@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, get, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD-4hZ84MzNLlsfBmXX53QXeqj74QDZsFw",
@@ -36,8 +36,35 @@ const screenLobby = document.getElementById('screen-lobby');
 const screenWaiting = document.getElementById('screen-waiting-room');
 const screenGame = document.getElementById('screen-game');
 
-const btnLogin = document.getElementById('btn-login');
-const loginSpinner = document.getElementById('login-spinner');
+// Auth DOM
+const loginContainer = document.getElementById('login-container');
+const registerContainer = document.getElementById('register-container');
+const authSpinner = document.getElementById('auth-spinner');
+
+const btnGoRegister = document.getElementById('btn-go-register');
+const btnGoLogin = document.getElementById('btn-go-login');
+
+btnGoRegister.addEventListener('click', () => {
+    loginContainer.style.display = 'none';
+    registerContainer.style.display = 'block';
+});
+btnGoLogin.addEventListener('click', () => {
+    registerContainer.style.display = 'none';
+    loginContainer.style.display = 'block';
+});
+
+// Forms
+const inputLoginEmail = document.getElementById('input-login-email');
+const inputLoginPassword = document.getElementById('input-login-password');
+const btnEmailLogin = document.getElementById('btn-email-login');
+
+const inputRegName = document.getElementById('input-register-name');
+const inputRegEmail = document.getElementById('input-register-email');
+const inputRegPassword = document.getElementById('input-register-password');
+const btnEmailRegister = document.getElementById('btn-email-register');
+
+const btnGoogleLogin = document.getElementById('btn-google-login');
+const btnGoogleRegister = document.getElementById('btn-google-register');
 
 // URL Parsing for invites
 const urlParams = new URLSearchParams(window.location.search);
@@ -60,24 +87,64 @@ if (currentUser && currentPlayerName) {
     screenLogin.classList.remove('hidden');
 }
 
-btnLogin.addEventListener('click', async () => {
-    btnLogin.style.display = 'none';
-    loginSpinner.style.display = 'block';
+function showSpinner(show) {
+    authSpinner.style.display = show ? 'block' : 'none';
+}
 
+btnEmailRegister.addEventListener('click', async () => {
+    let name = inputRegName.value.trim();
+    let email = inputRegEmail.value.trim();
+    let password = inputRegPassword.value;
+    
+    if(!name || !email || !password) {
+        alert("Por favor, completa todos los campos.");
+        return;
+    }
+    
+    showSpinner(true);
+    try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        let user = userCred.user;
+        user.displayName = name; // Set temporary for ID creation
+        handleAuthSuccess(user);
+    } catch (error) {
+        showSpinner(false);
+        alert("Error al registrarse: " + error.message);
+    }
+});
+
+btnEmailLogin.addEventListener('click', async () => {
+    let email = inputLoginEmail.value.trim();
+    let password = inputLoginPassword.value;
+    
+    if(!email || !password) {
+        alert("Ingresa tu correo y contraseña.");
+        return;
+    }
+    
+    showSpinner(true);
+    try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        handleAuthSuccess(userCred.user);
+    } catch (error) {
+        showSpinner(false);
+        alert("Error de inicio de sesión: " + error.message);
+    }
+});
+
+const handleGoogle = async () => {
+    showSpinner(true);
     try {
         const result = await signInWithPopup(auth, provider);
         handleAuthSuccess(result.user);
     } catch (error) {
-        console.error("Auth Error", error);
-        alert("Aviso: El inicio con Google falló (" + error.message + "). Entrando como invitado.");
-        let guestName = prompt("Ingresa tu nombre para jugar:") || "Jugador";
-        let fakeUser = {
-            uid: "GUEST_" + Math.random().toString(36).substr(2, 9),
-            displayName: guestName
-        };
-        handleAuthSuccess(fakeUser);
+        showSpinner(false);
+        alert("Error con Google Auth: " + error.message);
     }
-});
+};
+
+btnGoogleLogin.addEventListener('click', handleGoogle);
+btnGoogleRegister.addEventListener('click', handleGoogle);
 
 function handleAuthSuccess(user) {
     let userRef = ref(db, 'users/' + user.uid);
@@ -136,8 +203,7 @@ function saveLocalAndProceed(userDataObj) {
 }
 
 function resetLoginUI() {
-    btnLogin.style.display = 'flex';
-    loginSpinner.style.display = 'none';
+    showSpinner(false);
 }
 
 document.getElementById('btn-logout').addEventListener('click', () => {
