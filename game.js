@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, get, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD-4hZ84MzNLlsfBmXX53QXeqj74QDZsFw",
@@ -105,11 +105,19 @@ btnEmailRegister.addEventListener('click', async () => {
     try {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
         let user = userCred.user;
-        user.displayName = name; // Set temporary for ID creation
+        await updateProfile(user, { displayName: name }); // Guardar nombre oficialmente en la base de datos de Auth
         handleAuthSuccess(user);
     } catch (error) {
         showSpinner(false);
-        alert("Error al registrarse: " + error.message);
+        if (error.code === 'auth/operation-not-allowed') {
+            alert("Error: Debes ir a Firebase Console -> Authentication -> Sign-in Method y HABILITAR 'Correo electrónico/Contraseña'.");
+        } else if (error.code === 'auth/weak-password') {
+            alert("Error: La contraseña debe tener al menos 6 caracteres.");
+        } else if (error.code === 'auth/email-already-in-use') {
+            alert("Error: Este correo ya tiene una cuenta. Presiona en 'Inicia Sesión'.");
+        } else {
+            alert("Error al registrarse: " + error.message);
+        }
     }
 });
 
@@ -139,7 +147,11 @@ const handleGoogle = async () => {
         handleAuthSuccess(result.user);
     } catch (error) {
         showSpinner(false);
-        alert("Error con Google Auth: " + error.message);
+        if (error.code === 'auth/unauthorized-domain' || error.message.includes('origin')) {
+            alert("Aviso de Google: No puedes usar la cuenta de Google abriendo el archivo directamente. Por favor usa 'Crear Cuenta' con correo o levanta un servidor Localhost.");
+        } else {
+            alert("Error con Google Auth: " + error.message);
+        }
     }
 };
 
