@@ -5,6 +5,7 @@ import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstati
 const firebaseConfig = {
   apiKey: "AIzaSyD-4hZ84MzNLlsfBmXX53QXeqj74QDZsFw",
   authDomain: "parchis-92290.firebaseapp.com",
+  databaseURL: "https://parchis-92290-default-rtdb.firebaseio.com",
   projectId: "parchis-92290",
   storageBucket: "parchis-92290.firebasestorage.app",
   messagingSenderId: "656595089260",
@@ -65,45 +66,64 @@ btnLogin.addEventListener('click', async () => {
 
     try {
         const result = await signInWithPopup(auth, provider);
-        const user = result.user;
-        
-        let userRef = ref(db, 'users/' + user.uid);
-        get(userRef).then(snapshot => {
-            if (snapshot.exists()) {
-                let data = snapshot.val();
-                saveLocalAndProceed(data);
-            } else {
-                let counterRef = ref(db, 'global/userCounter');
-                runTransaction(counterRef, (currentValue) => {
-                    if (currentValue === null) return 1001; 
-                    return currentValue + 1;
-                }).then(({ committed, snapshot: counterSnapshot }) => {
-                    if (committed) {
-                        let newId = counterSnapshot.val();
-                        let shortName = user.displayName.split(' ')[0]; // Primer nombre
-                        let fullDisplay = `${shortName} #${newId}`;
-                        
-                        let newUserObj = {
-                            uid: user.uid,
-                            rawName: user.displayName,
-                            customId: newId,
-                            displayName: fullDisplay
-                        };
-                        
-                        set(userRef, newUserObj);
-                        saveLocalAndProceed(newUserObj);
-                    }
-                }).catch(err => {
-                    alert("Error generando ID: " + err.message);
-                    resetLoginUI();
-                });
-            }
-        });
+        handleAuthSuccess(result.user);
     } catch (error) {
         console.error("Auth Error", error);
-        resetLoginUI();
+        alert("Aviso: El inicio con Google falló (" + error.message + "). Entrando como invitado.");
+        let guestName = prompt("Ingresa tu nombre para jugar:") || "Jugador";
+        let fakeUser = {
+            uid: "GUEST_" + Math.random().toString(36).substr(2, 9),
+            displayName: guestName
+        };
+        handleAuthSuccess(fakeUser);
     }
 });
+
+function handleAuthSuccess(user) {
+    let userRef = ref(db, 'users/' + user.uid);
+    get(userRef).then(snapshot => {
+        if (snapshot.exists()) {
+            let data = snapshot.val();
+            saveLocalAndProceed(data);
+        } else {
+            let counterRef = ref(db, 'global/userCounter');
+            runTransaction(counterRef, (currentValue) => {
+                if (currentValue === null) return 1001; 
+                return currentValue + 1;
+            }).then(({ committed, snapshot: counterSnapshot }) => {
+                if (committed) {
+                    let newId = counterSnapshot.val();
+                    let shortName = user.displayName ? user.displayName.split(' ')[0] : "Jugador"; // Primer nombre
+                    let fullDisplay = `${shortName} #${newId}`;
+                    
+                    let newUserObj = {
+                        uid: user.uid,
+                        rawName: user.displayName || shortName,
+                        customId: newId,
+                        displayName: fullDisplay
+                    };
+                    
+                    set(userRef, newUserObj);
+                    saveLocalAndProceed(newUserObj);
+                }
+            }).catch(err => {
+                console.error("Database Error:", err);
+                // Fallback para IDs si falla la BD
+                let fallbackId = Math.floor(Math.random() * 9000) + 1000;
+                let shortName = user.displayName ? user.displayName.split(' ')[0] : "Jugador";
+                let newUserObj = { uid: user.uid, rawName: user.displayName || shortName, customId: fallbackId, displayName: `${shortName} #${fallbackId}` };
+                saveLocalAndProceed(newUserObj);
+            });
+        }
+    }).catch(err => {
+        console.error("Fetch User Error:", err);
+        // Fallback total
+        let fallbackId = Math.floor(Math.random() * 9000) + 1000;
+        let shortName = user.displayName ? user.displayName.split(' ')[0] : "Jugador";
+        let newUserObj = { uid: user.uid, rawName: user.displayName || shortName, customId: fallbackId, displayName: `${shortName} #${fallbackId}` };
+        saveLocalAndProceed(newUserObj);
+    });
+}
 
 function saveLocalAndProceed(userDataObj) {
     currentUser = userDataObj;
@@ -651,6 +671,8 @@ function playDiceAnimation(val) {
         if(val===5) { rotX=-90; rotY=0; }
         if(val===6) { rotX=90; rotY=0; }
         
+        dice.style.transform = `rotateX(${rotX}deg) rotateY(${rotY}deg)`;
+
         setTimeout(() => {
             overlay.classList.remove('visible');
         }, 1000);
