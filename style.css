@@ -261,20 +261,20 @@ body {
 .cell.start-red { background: radial-gradient(circle, #ff6b6b, var(--clr-red)); }
 
 /* The home bases */
-.cell.home-green { grid-column: 1 / 8; grid-row: 1 / 8; background: var(--clr-green); }
-.cell.home-yellow { grid-column: 13 / 20; grid-row: 1 / 8; background: var(--clr-yellow); }
-.cell.home-red { grid-column: 1 / 8; grid-row: 13 / 20; background: var(--clr-red); }
-.cell.home-blue { grid-column: 13 / 20; grid-row: 13 / 20; background: var(--clr-blue); }
+.cell.home-green { grid-column: 1 / 9; grid-row: 1 / 9; background: var(--clr-green); }
+.cell.home-red { grid-column: 12 / 20; grid-row: 1 / 9; background: var(--clr-red); }
+.cell.home-yellow { grid-column: 12 / 20; grid-row: 12 / 20; background: var(--clr-yellow); }
+.cell.home-blue { grid-column: 1 / 9; grid-row: 12 / 20; background: var(--clr-blue); }
 
 .cell.center {
     grid-column: 9 / 12; 
     grid-row: 9 / 12;
     background: conic-gradient(
         from -45deg,
-        var(--clr-green) 0deg 90deg,
+        var(--clr-red) 0deg 90deg,
         var(--clr-yellow) 90deg 180deg,
         var(--clr-blue) 180deg 270deg,
-        var(--clr-red) 270deg 360deg
+        var(--clr-green) 270deg 360deg
     );
     border-radius: 4px;
     box-shadow: inset 0 0 30px rgba(0,0,0,0.5);

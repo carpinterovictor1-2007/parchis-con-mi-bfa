@@ -567,18 +567,18 @@ for (let c = 1; c <= 8; c++) pathCoords.push([9, c]);
 for (let r = 8; r >= 1; r--) pathCoords.push([r, 9]);
 pathCoords.push([1, 10]);
 
-const stairsCoords = { 'green': [], 'yellow': [], 'blue': [], 'red': [] };
-for(let c=2; c<=8; c++) stairsCoords['red'].push([10, c]);
-for(let r=2; r<=8; r++) stairsCoords['green'].push([r, 10]);
-for(let c=18; c>=12; c--) stairsCoords['yellow'].push([10, c]);
-for(let r=18; r>=12; r--) stairsCoords['blue'].push([r, 10]);
+const stairsCoords = { 'red': [], 'green': [], 'yellow': [], 'blue': [] };
+for(let r=2; r<=8; r++) stairsCoords['red'].push([r, 10]);
+for(let c=2; c<=8; c++) stairsCoords['green'].push([10, c]);
+for(let r=18; r>=12; r--) stairsCoords['yellow'].push([r, 10]);
+for(let c=18; c>=12; c--) stairsCoords['blue'].push([10, c]);
 
-const START_INDEX = { 'green': 4, 'yellow': 21, 'blue': 38, 'red': 55 };
-const ENTRANCE_INDEX = { 'green': 67, 'yellow': 16, 'blue': 33, 'red': 50 }; 
+const START_INDEX = { 'red': 4, 'green': 55, 'yellow': 21, 'blue': 38 };
+const ENTRANCE_INDEX = { 'red': 67, 'green': 50, 'yellow': 16, 'blue': 33 }; 
 
 const homeSpots = {
-    'red': [[3,3], [3,6], [6,3], [6,6]], 
-    'green': [[3,14], [3,17], [6,14], [6,17]], 
+    'red': [[3,14], [3,17], [6,14], [6,17]], 
+    'green': [[3,3], [3,6], [6,3], [6,6]], 
     'yellow': [[14,14], [14,17], [17,14], [17,17]], 
     'blue': [[14,3], [14,6], [17,3], [17,6]] 
 };
@@ -611,7 +611,7 @@ function drawBoardCells() {
             
             if (r <= 8 && c <= 8) { 
                 if(r===1 && c===1) {
-                    div.classList.add('home-red');
+                    div.classList.add('home-green');
                     div.style.gridColumn = '1 / 9';
                     div.style.gridRow = '1 / 9';
                     boardEl.appendChild(div);
@@ -619,7 +619,7 @@ function drawBoardCells() {
             }
             else if (r <= 8 && c >= 12) { 
                 if(r===1 && c===12) {
-                    div.classList.add('home-green');
+                    div.classList.add('home-red');
                     div.style.gridColumn = '12 / 20';
                     div.style.gridRow = '1 / 9';
                     boardEl.appendChild(div);
@@ -720,12 +720,16 @@ function renderPawns() {
                 r = spot[0]; c = spot[1];
             } else {
                 let spot = pathCoords[pawn.pathIndex];
-                r = spot[0]; c = spot[1];
+                if (spot) {
+                    r = spot[0]; c = spot[1];
+                }
             }
             
-            let key = `${r},${c}`;
-            if (!occupancy[key]) occupancy[key] = [];
-            occupancy[key].push({ id: pawn.id, isHome: pawn.isHome });
+            if (r !== undefined && c !== undefined) {
+                let key = `${r},${c}`;
+                if (!occupancy[key]) occupancy[key] = [];
+                occupancy[key].push({ id: pawn.id, isHome: pawn.isHome });
+            }
         }
     });
 
@@ -739,14 +743,16 @@ function renderPawns() {
         let r, c;
         if (pawn.isHome) {
             let spot = homeSpots[pawn.color][pawn.pieceIdx];
-            r = spot[0]; c = spot[1];
+            if (spot) { r = spot[0]; c = spot[1]; }
         } else if (pawn.stairIndex !== null) {
             let spot = stairsCoords[pawn.color][pawn.stairIndex];
-            r = spot[0]; c = spot[1];
+            if (spot) { r = spot[0]; c = spot[1]; }
         } else {
             let spot = pathCoords[pawn.pathIndex];
-            r = spot[0]; c = spot[1];
+            if (spot) { r = spot[0]; c = spot[1]; }
         }
+
+        if (r === undefined || c === undefined) return;
 
         pawnEl.style.gridRow = r;
         pawnEl.style.gridColumn = c;
