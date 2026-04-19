@@ -28,8 +28,12 @@
                 
                 <div class="input-group">
                     <input type="email" id="input-login-email" placeholder="Correo Electrónico">
-                    <input type="password" id="input-login-password" placeholder="Contraseña">
-                    <button id="btn-email-login" class="btn-primary mt-4">Iniciar Sesión</button>
+                    <div class="password-wrapper">
+                        <input type="password" id="input-login-password" placeholder="Contraseña">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('input-login-password')">👁️</button>
+                    </div>
+                    <button id="btn-forgot-password" class="link-btn" style="text-align: right; margin-top: -5px;">¿Olvidaste tu contraseña?</button>
+                    <button id="btn-email-login" class="btn-primary mt-2">Iniciar Sesión</button>
                 </div>
                 
                 <p style="margin: 15px 0; font-size: 0.9rem; opacity: 0.6;">o</p>
@@ -52,7 +56,14 @@
                 <div class="input-group">
                     <input type="text" id="input-register-name" placeholder="Escribe tu Nombre">
                     <input type="email" id="input-register-email" placeholder="Correo Electrónico">
-                    <input type="password" id="input-register-password" placeholder="Crear Contraseña">
+                    <div class="password-wrapper">
+                        <input type="password" id="input-register-password" placeholder="Crear Contraseña">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('input-register-password')">👁️</button>
+                    </div>
+                    <div class="password-wrapper">
+                        <input type="password" id="input-register-password-confirm" placeholder="Confirmar Contraseña">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('input-register-password-confirm')">👁️</button>
+                    </div>
                     <button id="btn-email-register" class="btn-primary mt-4">Crear Cuenta</button>
                 </div>
                 
@@ -100,7 +111,10 @@
                     </div>
                 </div>
                 
-                <button id="btn-logout" class="link-btn mt-4">Cambiar Nombre</button>
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button id="btn-logout" class="btn-secondary" style="background: rgba(255,59,48,0.2); border-color: rgba(255,59,48,0.4);">Cerrar Sesión</button>
+                    <button id="btn-switch-account" class="btn-secondary">Cambiar Cuenta</button>
+                </div>
             </div>
         </div>
 

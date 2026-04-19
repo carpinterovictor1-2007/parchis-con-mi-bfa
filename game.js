@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
 import { getDatabase, ref, set, onValue, get, update, runTransaction } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+import { getAuth, signInWithPopup, GoogleAuthProvider, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, sendPasswordResetEmail, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyD-4hZ84MzNLlsfBmXX53QXeqj74QDZsFw",
@@ -66,6 +66,10 @@ const btnEmailRegister = document.getElementById('btn-email-register');
 const btnGoogleLogin = document.getElementById('btn-google-login');
 const btnGoogleRegister = document.getElementById('btn-google-register');
 
+const inputRegPasswordConfirm = document.getElementById('input-register-password-confirm');
+const btnForgotPassword = document.getElementById('btn-forgot-password');
+const btnSwitchAccount = document.getElementById('btn-switch-account');
+
 // URL Parsing for invites
 const urlParams = new URLSearchParams(window.location.search);
 const inviteRoom = urlParams.get('r');
@@ -81,11 +85,25 @@ function checkInitialRouting() {
     }
 }
 
-if (currentUser && currentPlayerName) {
-    checkInitialRouting();
-} else {
-    screenLogin.classList.remove('hidden');
-}
+// Active Session Listener (Always replaces manual check for security)
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        // We have a Firebase user, now check if we have their database details
+        let userRef = ref(db, 'users/' + user.uid);
+        get(userRef).then(snapshot => {
+            if (snapshot.exists()) {
+                saveLocalAndProceed(snapshot.val());
+            } else {
+                // User is new but signed in (e.g. Google logic)
+                handleAuthSuccess(user);
+            }
+        });
+    } else {
+        // No user, ensure login screen is visible
+        screenLobby.classList.add('hidden');
+        screenLogin.classList.remove('hidden');
+    }
+});
 
 function showSpinner(show) {
     authSpinner.style.display = show ? 'block' : 'none';
@@ -95,9 +113,15 @@ btnEmailRegister.addEventListener('click', async () => {
     let name = inputRegName.value.trim();
     let email = inputRegEmail.value.trim();
     let password = inputRegPassword.value;
+    let confirm = inputRegPasswordConfirm.value;
     
-    if(!name || !email || !password) {
+    if(!name || !email || !password || !confirm) {
         alert("Por favor, completa todos los campos.");
+        return;
+    }
+
+    if (password !== confirm) {
+        alert("Erro: Las contraseñas no coinciden. Por favor, verifica.");
         return;
     }
     
@@ -157,6 +181,32 @@ const handleGoogle = async () => {
 
 btnGoogleLogin.addEventListener('click', handleGoogle);
 btnGoogleRegister.addEventListener('click', handleGoogle);
+
+btnForgotPassword.addEventListener('click', async () => {
+    let email = inputLoginEmail.value.trim();
+    if (!email) {
+        alert("Por favor, escribe tu correo electrónico primero en el campo de arriba para enviarte el enlace de recuperación.");
+        return;
+    }
+    
+    try {
+        await sendPasswordResetEmail(auth, email);
+        alert("¡Enlace enviado! Revisa tu bandeja de entrada (y la carpeta de spam) para restablecer tu contraseña.");
+    } catch (error) {
+        alert("Error al enviar correo de recuperación: " + error.message);
+    }
+});
+
+function togglePasswordVisibility(inputId) {
+    const input = document.getElementById(inputId);
+    if (!input) return;
+    if (input.type === "password") {
+        input.type = "text";
+    } else {
+        input.type = "password";
+    }
+}
+window.togglePasswordVisibility = togglePasswordVisibility; // Make it global for HTML onclick
 
 function handleAuthSuccess(user) {
     let userRef = ref(db, 'users/' + user.uid);
@@ -219,6 +269,17 @@ function resetLoginUI() {
 }
 
 document.getElementById('btn-logout').addEventListener('click', () => {
+    auth.signOut();
+    localStorage.removeItem('parchis_auth_user');
+    currentUser = null;
+    currentPlayerName = "";
+    currentUserId = null;
+    resetLoginUI();
+    screenLobby.classList.add('hidden');
+    screenLogin.classList.remove('hidden');
+});
+
+btnSwitchAccount.addEventListener('click', () => {
     auth.signOut();
     localStorage.removeItem('parchis_auth_user');
     currentUser = null;
