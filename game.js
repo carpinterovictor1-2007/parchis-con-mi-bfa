@@ -394,7 +394,8 @@ document.getElementById('btn-start-match').addEventListener('click', () => {
 
 // --- FIREBASE SYNC ENGINE ---
 let localDiceTrigger = 0;
-let chatMessagesRendered = 0; // to avoid re-rendering entire history
+let chatMessagesRendered = 0; 
+let turnRolledSix = false;
 
 function listenToRoom() {
     onValue(gameRef, (snapshot) => {
@@ -421,6 +422,7 @@ function listenToRoom() {
             diceValue = data.diceValue;
             diceRolled = data.diceRolled;
             consecutiveSixes = data.consecutiveSixes || 0;
+            turnRolledSix = data.turnRolledSix || false;
             lastMovedPawnId = data.lastMovedPawnId || null;
             PLAYERS = data.activePlayers || [];
             
@@ -703,7 +705,8 @@ function renderPawns() {
         }
 
         if (diceRolled && pawn.color === PLAYERS[turnIndex] && pawn.color === myColor) {
-            if (isValidMove(pawn, diceValue)) {
+            let validMoves = getSelectablePawns(myColor, diceValue);
+            if (validMoves.find(p => p.id === pawn.id)) {
                 pawnEl.classList.add('selectable');
                 pawnEl.onclick = () => handlePawnClick(pawn);
             }
@@ -713,10 +716,39 @@ function renderPawns() {
     });
 }
 
+function getSelectablePawns(color, dVal) {
+    let possibleMoves = gameState.filter(p => p.color === color && isValidMove(p, dVal));
+    
+    // Regla del 5 Mágico (Excluye si es un bono de +10/+20 actuando en la variable dVal)
+    if (dVal === 5) {
+        let pawnsInHome = gameState.filter(p => p.color === color && p.isHome);
+        if (pawnsInHome.length > 0) {
+            let homeMoves = possibleMoves.filter(p => p.isHome);
+            if (homeMoves.length > 0) return homeMoves; // FORZADO A SALIR
+        }
+    }
+    
+    // Regla de Ruptura de Puente Obligatoria (Solo para dados directos 6 o 7)
+    if (dVal === 6 || dVal === 7) {
+        let myPathPawns = gameState.filter(p => p.color === color && !p.isHome && p.stairIndex === null);
+        let bridgeIdxs = [];
+        myPathPawns.forEach(p1 => {
+            let count = myPathPawns.filter(p2 => p2.pathIndex === p1.pathIndex).length;
+            if (count >= 2 && !bridgeIdxs.includes(p1.pathIndex)) bridgeIdxs.push(p1.pathIndex);
+        });
+        
+        if (bridgeIdxs.length > 0) {
+            let bridgePawns = possibleMoves.filter(p => bridgeIdxs.includes(p.pathIndex));
+            if (bridgePawns.length > 0) return bridgePawns; // FORZADO A ROMPER BARRERA
+        }
+    }
+    
+    return possibleMoves;
+}
+
 document.getElementById('btn-roll').addEventListener('click', () => {
     if (diceRolled) return;
     
-    // Check if it's strictly our turn and NO pawns are animating
     if (PLAYERS[turnIndex] !== myColor) {
         alert("¡Aún no es tu turno!");
         return;
@@ -740,7 +772,6 @@ function playDiceAnimation(val) {
     
     setTimeout(() => {
         dice.classList.remove('rolling');
-        
         let rotX = 0, rotY = 0;
         if(val===1) { rotX=0; rotY=0; }
         if(val===2) { rotX=0; rotY=-90; }
@@ -756,68 +787,80 @@ function playDiceAnimation(val) {
         }, 1000);
 
         if (PLAYERS[turnIndex] === myColor) {
+            let actualValue = val;
+            let myPawnsInHome = gameState.filter(p => p.color === myColor && p.isHome);
             
+            // Regla del 7 si todas salieron
+            if (actualValue === 6 && myPawnsInHome.length === 0) actualValue = 7;
+            
+            // Castigo 3er seis
             if (val === 6) {
                 consecutiveSixes++;
-            } else {
+            } else if (val <= 6) {
                 consecutiveSixes = 0;
             }
             
             if (consecutiveSixes === 3) {
-                document.getElementById('status-message').innerText = `¡Tres seises seguidos! Ficha a casa.`;
-                consecutiveSixes = 0;
+                document.getElementById('status-message').innerText = `¡Tres seises seguidos! Ficha castigada a casa.`;
                 let lastPawn = gameState.find(p => p.id === lastMovedPawnId);
-                if (lastPawn && !lastPawn.isMeta && lastPawn.stairIndex === null && !lastPawn.isHome) {
+                // "a menos que esté en el pasillo de meta"
+                if (lastPawn && lastPawn.color === myColor && lastPawn.stairIndex === null && !lastPawn.isHome && !lastPawn.isMeta) {
                     lastPawn.isHome = true;
                     lastPawn.pathIndex = null;
-                    lastPawn.stairIndex = null;
                 }
+                
                 setTimeout(() => {
-                    let nextIdx = (turnIndex + 1) % PLAYERS.length;
                     update(gameRef, {
                         diceRolled: false,
-                        turnIndex: nextIdx,
+                        turnIndex: (turnIndex + 1) % PLAYERS.length,
                         consecutiveSixes: 0,
-                        gameState: gameState // sync punished pawn
+                        turnRolledSix: false,
+                        gameState: gameState 
                     });
                 }, 2000);
                 return; 
             }
             
-            let possibleMoves = gameState.filter(p => p.color === myColor && isValidMove(p, val));
+            let possibleMoves = getSelectablePawns(myColor, actualValue);
             
             if (possibleMoves.length === 0) {
-                document.getElementById('status-message').innerText = `No se puede mover. Turno de ${PLAYERS[(turnIndex + 1) % PLAYERS.length].toUpperCase()}.`;
+                document.getElementById('status-message').innerText = `Sin movimientos válidos. Turno perdido.`;
                 setTimeout(() => {
                     let nextIdx = (turnIndex + 1) % PLAYERS.length;
+                    if (val === 6) nextIdx = turnIndex; // Mantiene el turno si había sacado 6 aunque estancado
+                    
                     update(gameRef, {
                         diceRolled: false,
                         turnIndex: nextIdx,
-                        consecutiveSixes: consecutiveSixes
+                        consecutiveSixes: consecutiveSixes,
+                        turnRolledSix: false
                     });
                 }, 2000);
             } else {
                 update(gameRef, {
+                    diceValue: actualValue,
                     diceRolled: true,
-                    consecutiveSixes: consecutiveSixes
+                    consecutiveSixes: consecutiveSixes,
+                    turnRolledSix: (val === 6)
                 });
             }
         }
-
     }, 800);
 }
 
 function isValidMove(pawn, steps) {
     if (pawn.isMeta) return false;
     
+    // Regla de Entrada Exacta (Sin rebote, simplemente deshabilitada)
+    if (pawn.stairIndex !== null) {
+        if (pawn.stairIndex + steps > 7) return false; 
+    }
+
     if (pawn.isHome) {
         if (steps !== 5) return false;
         
-        let pawnsOnStart = gameState.filter(p => !p.isHome && p.pathIndex === START_INDEX[pawn.color]);
-        if (pawnsOnStart.length >= 2) {
-            let myPawnsThere = pawnsOnStart.filter(p => p.color === pawn.color);
-            if (myPawnsThere.length === 2) return false; 
-        }
+        let pawnsOnStart = gameState.filter(p => !p.isHome && p.stairIndex === null && p.pathIndex === START_INDEX[pawn.color]);
+        if (pawnsOnStart.length >= 2) return false; // Bloqueo de salida porque hay puente 
         return true;
     }
     
@@ -830,10 +873,9 @@ function isValidMove(pawn, steps) {
                 sIdx = 0;
             } else {
                 let nextIdx = (currentIdx + 1) % 68;
-                let pawnsAhead = gameState.filter(p => !p.isHome && p.pathIndex === nextIdx);
-                if (pawnsAhead.length >= 2 && i < steps - 1) {
-                    return false; 
-                }
+                let pawnsAhead = gameState.filter(p => !p.isHome && p.stairIndex === null && p.pathIndex === nextIdx);
+                // "Ninguna ficha puede saltar sobre un puente": No pasamos si la capacidad ya era 2
+                if (pawnsAhead.length >= 2 && i < steps - 1) return false; 
                 currentIdx = nextIdx;
             }
         } else {
@@ -842,10 +884,10 @@ function isValidMove(pawn, steps) {
     }
     
     if (sIdx !== null) {
-        if (sIdx === 7) return true; 
         if (sIdx > 7) return false; 
     } else {
-        let pawnsOnFinal = gameState.filter(p => !p.isHome && p.pathIndex === currentIdx);
+        // "Capacidad Máxima: Ninguna casilla puede contener más de 2 fichas."
+        let pawnsOnFinal = gameState.filter(p => !p.isHome && p.stairIndex === null && p.pathIndex === currentIdx);
         if (pawnsOnFinal.length >= 2) return false; 
     }
     
@@ -855,7 +897,9 @@ function isValidMove(pawn, steps) {
 function handlePawnClick(pawn) {
     if (!diceRolled || pawn.color !== myColor) return;
     if (PLAYERS[turnIndex] !== myColor) return; 
-    if (!isValidMove(pawn, diceValue)) return;
+    
+    let validMoves = getSelectablePawns(myColor, diceValue);
+    if (!validMoves.find(p => p.id === pawn.id)) return;
 
     lastMovedPawnId = pawn.id; 
 
@@ -869,11 +913,8 @@ function handlePawnClick(pawn) {
         
         for (let i = 0; i < diceValue; i++) {
             if (sIdx === null) {
-                if (currentIdx === ENTRANCE_INDEX[pawn.color]) {
-                    sIdx = 0;
-                } else {
-                    currentIdx = (currentIdx + 1) % 68;
-                }
+                if (currentIdx === ENTRANCE_INDEX[pawn.color]) sIdx = 0;
+                else currentIdx = (currentIdx + 1) % 68;
             } else {
                 sIdx++;
             }
@@ -892,52 +933,66 @@ function handlePawnClick(pawn) {
 }
 
 function checkCaptureOrMove(movingPawn) {
-    extraTurn = false;
+    let bonusMove = null;
     
     if (!movingPawn.isMeta && movingPawn.pathIndex !== null) {
-        let sameSquare = gameState.filter(p => !p.isHome && p.pathIndex === movingPawn.pathIndex && p.id !== movingPawn.id);
+        let sameSquare = gameState.filter(p => !p.isHome && p.stairIndex === null && p.pathIndex === movingPawn.pathIndex && p.id !== movingPawn.id);
         
-        if (movingPawn.pathIndex === START_INDEX[movingPawn.color] && sameSquare.length === 2) {
-            let opponent = sameSquare.find(p => p.color !== movingPawn.color);
-            if (opponent) {
-                opponent.isHome = true;
-                opponent.pathIndex = null;
-                opponent.stairIndex = null;
-                extraTurn = true; 
-            }
-        }
-        else if (!SAFE_SQUARES.includes(movingPawn.pathIndex)) {
+        // La Comida: Ficha ajena capturada en casilla normal vuelve a cárcel
+        if (!SAFE_SQUARES.includes(movingPawn.pathIndex) && sameSquare.length > 0) {
             let opponents = sameSquare.filter(p => p.color !== movingPawn.color);
-            opponents.forEach(target => {
-                target.isHome = true;
-                target.pathIndex = null;
-                target.stairIndex = null;
-                extraTurn = true;
-            });
+            if (opponents.length > 0) {
+                opponents.forEach(target => {
+                    target.isHome = true;
+                    target.pathIndex = null;
+                    target.stairIndex = null;
+                });
+                bonusMove = 20; // Premio por captura
+            }
         }
     }
 
-    if (diceValue === 6) extraTurn = true;
-    if (movingPawn.isMeta) extraTurn = true; 
+    // Premio por Meta
+    if (movingPawn.isMeta) {
+        bonusMove = 10;
+    }
 
-    finalizeMove();
+    finalizeMove(bonusMove, movingPawn.id);
 }
 
-function finalizeMove() {
+function finalizeMove(bonusMove, mpId) {
     let myPawns = gameState.filter(p => p.color === myColor);
     if (myPawns.every(p => p.isMeta)) {
         showWinModal(myColor);
-        // Maybe broadcast win state, but for now just let it be
     }
 
+    // Si hay premio, habilitar que consuman los 20 o 10 pasos
+    if (bonusMove) {
+        let possible = getSelectablePawns(myColor, bonusMove);
+        if (possible.length > 0) {
+            update(gameRef, {
+                diceValue: bonusMove,
+                diceRolled: true,
+                gameState: gameState,
+                lastMovedPawnId: mpId
+            });
+            return;
+        }
+    }
+
+    // Fin oficial del turno/sub-turno
     let nextIdx = turnIndex;
-    if (!extraTurn) nextIdx = (turnIndex + 1) % PLAYERS.length;
+    
+    if (!turnRolledSix) {
+        nextIdx = (turnIndex + 1) % PLAYERS.length;
+    }
     
     update(gameRef, {
         gameState: gameState,
         diceRolled: false,
         turnIndex: nextIdx,
-        lastMovedPawnId: lastMovedPawnId
+        lastMovedPawnId: mpId,
+        turnRolledSix: false
     });
 }
 
